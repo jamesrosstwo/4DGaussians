@@ -26,6 +26,7 @@ class Camera(nn.Module):
         self.colmap_id = colmap_id
         self.R = R
         self.T = T
+        breakpoint()
         self.FoVx = FoVx
         self.FoVy = FoVy
         self.image_name = image_name
