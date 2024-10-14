@@ -135,7 +135,7 @@ def render(viewpoint_camera, gaussians, bg_color: torch.Tensor, scaling_modifier
             "viewspace_points": info["means2d"],
             "visibility_filter": radii > 0,
             "radii": radii,
-            "depth": depth}
+            "depth": info["depths"]}
 
 
 def init_gaussians(dataset: ModelParams, hyperparam, iteration: int, pipeline: PipelineParams, skip_train: bool,

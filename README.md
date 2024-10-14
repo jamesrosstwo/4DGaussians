@@ -19,7 +19,7 @@ Our method converges very quickly and achieves real-time rendering speed.
 New Colab demo:[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1wz0D5Y9egAlcxXy8YO9UmpQ9oH51R7OW?usp=sharing) (Thanks [Tasmay-Tibrewal
 ](https://github.com/Tasmay-Tibrewal))
 
-Old Colab demo:[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hustvl/4DGaussians/blob/master/4DGaussians.ipynb) (Thanks [camenduru](https://github.com/camenduru/4DGaussians-colab).)
+Old Colab demo:[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jamesrosstwo/4DGaussians/blob/master/4DGaussians.ipynb) (Thanks [camenduru](https://github.com/camenduru/4DGaussians-colab).)
 
 Light Gaussian implementation: [This link](https://github.com/pablodawson/4DGaussians) (Thanks [pablodawson](https://github.com/pablodawson))
 
@@ -41,15 +41,13 @@ Light Gaussian implementation: [This link](https://github.com/pablodawson/4DGaus
 Please follow the [3D-GS](https://github.com/graphdeco-inria/gaussian-splatting) to install the relative packages.
 
 ```bash
-git clone https://github.com/hustvl/4DGaussians
+git clone https://github.com/jamesrosstwo/4DGaussians
 cd 4DGaussians
 git submodule update --init --recursive
 conda create -n Gaussians4D python=3.7 
 conda activate Gaussians4D
 
 pip install -r requirements.txt
-pip install -e submodules/depth-diff-gaussian-rasterization
-pip install -e submodules/simple-knn
 ```
 
 In our environment, we use pytorch=1.13.1+cu116.
