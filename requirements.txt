@@ -10,4 +10,3 @@ pytorch_msssim
 open3d
 imageio[ffmpeg]
 tensorboard
-gsplat
