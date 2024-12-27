@@ -30,7 +30,8 @@ from copy import deepcopy
 #
 import torch
 import math
-from gsplat import rasterization
+from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
+from scene.gaussian_model import GaussianModel
 from utils.render_utils import get_state_at_time
 from tqdm import tqdm
 
@@ -62,8 +63,8 @@ def render(viewpoint_camera, gaussians, bg_color: torch.Tensor, scaling_modifier
            motion_bias=[torch.tensor([0, 0, 0])], rotation_bias=[torch.tensor([0, 0])],
            scales_bias=[1, 1]):
     """
-    Render the scene. 
-    
+    Render the scene.
+
     Background tensor (bg_color) must be on GPU!
     """
 
@@ -73,22 +74,41 @@ def render(viewpoint_camera, gaussians, bg_color: torch.Tensor, scaling_modifier
 
     tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
     tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)
-
-    focal_length_x = viewpoint_camera.image_width / (2 * tanfovx)
-    focal_length_y = viewpoint_camera.image_height / (2 * tanfovy)
-    K = torch.tensor(
-        [
-            [focal_length_x, 0, viewpoint_camera.image_width / 2.0],
-            [0, focal_length_y, viewpoint_camera.image_height / 2.0],
-            [0, 0, 1],
-        ],
-        device="cuda",
+    screenspace_points = None
+    for pc in gaussians:
+        if screenspace_points is None:
+            screenspace_points = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, requires_grad=True,
+                                                  device="cuda") + 0
+        else:
+            screenspace_points1 = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, requires_grad=True,
+                                                   device="cuda") + 0
+            screenspace_points = torch.cat([screenspace_points, screenspace_points1], dim=0)
+    try:
+        screenspace_points.retain_grad()
+    except:
+        pass
+    raster_settings = GaussianRasterizationSettings(
+        image_height=int(viewpoint_camera.image_height),
+        image_width=int(viewpoint_camera.image_width),
+        tanfovx=tanfovx,
+        tanfovy=tanfovy,
+        bg=bg_color,
+        scale_modifier=scaling_modifier,
+        viewmatrix=viewpoint_camera.world_view_transform.cuda(),
+        projmatrix=viewpoint_camera.full_proj_transform.cuda(),
+        sh_degree=gaussians[0].active_sh_degree,
+        campos=viewpoint_camera.camera_center.cuda(),
+        prefiltered=False,
+        debug=False
     )
+
+    rasterizer = GaussianRasterizer(raster_settings=raster_settings)
     # means3D = pc.get_xyz
     # add deformation to each points
     # deformation = pc.get_deformation
     means3D_final, scales_final, rotations_final, opacity_final, shs_final = None, None, None, None, None
     for index, pc in enumerate(gaussians):
+
         means3D_final1, scales_final1, rotations_final1, opacity_final1, shs_final1 = get_state_at_time(pc,
                                                                                                         viewpoint_camera)
         scales_final1 = pc.scaling_activation(scales_final1)
@@ -108,34 +128,23 @@ def render(viewpoint_camera, gaussians, bg_color: torch.Tensor, scaling_modifier
             opacity_final = torch.cat([opacity_final, opacity_final1], dim=0)
             shs_final = torch.cat([shs_final, shs_final1], dim=0)
 
-    viewmat = viewpoint_camera.world_view_transform.transpose(0, 1)
-    render_colors, render_alphas, info = rasterization(
-        means=means3D_final,  # [N, 3]
-        quats=rotations_final,  # [N, 4]
-        scales=scales_final * scaling_modifier,  # [N, 3]
-        opacities=opacity_final.squeeze(-1),  # [N,]
-        colors=colors,
-        viewmats=viewmat[None],  # [1, 4, 4]
-        Ks=K[None],  # [1, 3, 3]
-        backgrounds=bg_color[None],
-        width=int(viewpoint_camera.image_width),
-        height=int(viewpoint_camera.image_height),
-        packed=False,
-        sh_degree=gaussians[0].active_sh_degree,
-    )
-
-    rendered_image = render_colors[0].permute(2, 0, 1)
-    radii = info["radii"].squeeze(0)  # [N,]
-    try:
-        info["means2d"].retain_grad()  # [1, N, 2]
-    except:
-        pass
+    colors_precomp = None
+    cov3D_precomp = None
+    rendered_image, radii, depth = rasterizer(
+        means3D=means3D_final,
+        means2D=screenspace_points,
+        shs=shs_final,
+        colors_precomp=colors_precomp,
+        opacities=opacity_final,
+        scales=scales_final,
+        rotations=rotations_final,
+        cov3D_precomp=cov3D_precomp)
 
     return {"render": rendered_image,
-            "viewspace_points": info["means2d"],
+            "viewspace_points": screenspace_points,
             "visibility_filter": radii > 0,
             "radii": radii,
-            "depth": info["depths"]}
+            "depth": depth}
 
 
 def init_gaussians(dataset: ModelParams, hyperparam, iteration: int, pipeline: PipelineParams, skip_train: bool,
