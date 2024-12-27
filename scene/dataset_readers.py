@@ -470,7 +470,7 @@ def add_points(pointsclouds, xyz_min, xyz_max):
 def readdynerfInfo(datadir, use_bg_points, eval):
     # loading all the data follow hexplane format
     # ply_path = os.path.join(datadir, "points3D_dense.ply")
-    llff = np.load(os.path.join(datadir, "poses_bounds.ply"))
+    llff = np.load(os.path.join(datadir, "poses_bounds.npy"))
     poses_arr = llff[:-2].reshape(3, 5)
     frame_height, frame_width, _ = poses_arr[:, 4] / 2
     ply_path = os.path.join(datadir, "points3D_downsample2.ply")
