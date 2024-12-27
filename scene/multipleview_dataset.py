@@ -63,8 +63,14 @@ class multipleview_dataset(Dataset):
         N_views = 300
         val_poses = get_spiral(poses, near_fars, N_views=N_views)
 
+        print(poses_arr.shape)
+        print(poses.shape)
+        print(poses)
+
         cameras = []
         len_poses = len(val_poses)
+
+
         times = [i/len_poses for i in range(len_poses)]
         image = Image.open(self.image_paths[0])
         image = self.transform(image)
@@ -81,6 +87,8 @@ class multipleview_dataset(Dataset):
             T = -pose[:3,3].dot(R)
             FovX = self.FovX
             FovY = self.FovY
+
+            print("Video camera {0}, pose {1}, t={2}".format(idx, R, T))
             cameras.append(CameraInfo(uid=idx, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
                                 image_path=image_path, image_name=image_name, width=image.shape[2], height=image.shape[1],
                                 time = time, mask=None))

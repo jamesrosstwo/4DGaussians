@@ -1,0 +1,24 @@
+{
+  "name": "gs_dynamics",
+  "image": "jamesrosstwo/gs-dynamics:latest",
+  "mounts": [
+    {
+      "source": "/home/james/Desktop/acme/outputs/gs_dynamics_isaac_2024-11-01_14-54-34/gs_dynamics/execution_history.sh",
+      "target": "/opt/gs-dynamics/execution_history.sh",
+      "type": "bind"
+    },
+    {
+      "source": "/home/james/Desktop/acme/data/gs-dynamics/episode_rope",
+      "target": "/opt/gs-dynamics/data/episode_rope",
+      "type": "bind"
+    }
+  ],
+  "containerEnv": {
+    "NVIDIA_VISIBLE_DEVICES": "2"
+  },
+  "runArgs": [
+    "--gpus=all",
+    "--shm-size=24gb",
+    "--workdir=/opt/gs-dynamics"
+  ]
+}

@@ -470,6 +470,9 @@ def add_points(pointsclouds, xyz_min, xyz_max):
 def readdynerfInfo(datadir, use_bg_points, eval):
     # loading all the data follow hexplane format
     # ply_path = os.path.join(datadir, "points3D_dense.ply")
+    llff = np.load(os.path.join(datadir, "poses_bounds.ply"))
+    poses_arr = llff[:-2].reshape(3, 5)
+    frame_height, frame_width, _ = poses_arr[:, 4] / 2
     ply_path = os.path.join(datadir, "points3D_downsample2.ply")
     from scene.neural_3D_dataset_NDC import Neural3D_NDC_Dataset
     train_dataset = Neural3D_NDC_Dataset(
@@ -477,17 +480,19 @@ def readdynerfInfo(datadir, use_bg_points, eval):
         "train",
         1.0,
         time_scale=1,
-        scene_bbox_min=[-2.5, -2.0, -1.0],
-        scene_bbox_max=[2.5, 2.0, 1.0],
+        scene_bbox_min=[-4, -4, -1.0],
+        scene_bbox_max=[4, 4, 4],
         eval_index=0,
+        height=frame_height,
+        width=frame_width,
     )
     test_dataset = Neural3D_NDC_Dataset(
         datadir,
         "test",
         1.0,
         time_scale=1,
-        scene_bbox_min=[-2.5, -2.0, -1.0],
-        scene_bbox_max=[2.5, 2.0, 1.0],
+        scene_bbox_min=[-4, -4, -1.0],
+        scene_bbox_max=[4, 4, 4],
         eval_index=0,
     )
     train_cam_infos = format_infos(train_dataset, "train")
