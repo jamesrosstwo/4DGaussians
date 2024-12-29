@@ -494,6 +494,8 @@ def readdynerfInfo(datadir, use_bg_points, eval):
         scene_bbox_min=[-4, -4, -1.0],
         scene_bbox_max=[4, 4, 4],
         eval_index=0,
+        height=frame_height,
+        width=frame_width,
     )
     train_cam_infos = format_infos(train_dataset, "train")
     val_cam_infos = format_render_poses(test_dataset.val_poses, test_dataset)
