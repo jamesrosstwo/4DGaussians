@@ -10,3 +10,4 @@ pytorch_msssim
 open3d
 imageio[ffmpeg]
 tensorboard
+git+https://github.com/nerfstudio-project/gsplat.git
