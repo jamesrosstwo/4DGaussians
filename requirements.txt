@@ -1,6 +1,13 @@
+--index-url https://download.pytorch.org/whl/rocm6.1
+
+--extra-index-url https://pypi.org/simple
+
+--extra-index-url https://docs.gsplat.studio/whl/pt24cu118
+
 torch==2.4.1
 torchvision==0.19.1
 torchaudio==2.4.1
+
 matplotlib
 argparse
 lpips
@@ -14,5 +21,4 @@ numpy
 jaxtyping
 rich
 
---index-url https://docs.gsplat.studio/whl/pt24cu118
 gsplat
