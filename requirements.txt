@@ -1,12 +1,12 @@
---index-url https://download.pytorch.org/whl/rocm6.1
+--index-url https://download.pytorch.org/whl/rocm5.2
 
 --extra-index-url https://pypi.org/simple
 
 --extra-index-url https://docs.gsplat.studio/whl/pt24cu118
 
-torch==2.4.1
-torchvision==0.19.1
-torchaudio==2.4.1
+torch==1.13.1+cu117
+torchvision==0.14.1+cu117
+torchaudio==0.13.1
 
 matplotlib
 argparse
