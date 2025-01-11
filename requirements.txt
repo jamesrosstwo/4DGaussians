@@ -25,4 +25,4 @@ rich
 
 gsplat
 opencv-python-headless
-mmcv==2.2.0
+mmcv==1.6.0
