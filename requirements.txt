@@ -2,8 +2,6 @@
 
 --extra-index-url https://download.pytorch.org/whl/cu117
 
---extra-index-url https://docs.gsplat.studio/whl/pt24cu118
-
 --find-links https://download.openmmlab.com/mmcv/dist/cu117/torch1.13/index.html
 
 torch==1.13.1+cu117
@@ -23,6 +21,6 @@ numpy
 jaxtyping
 rich
 
-gsplat
+git+https://github.com/nerfstudio-project/gsplat.git
 opencv-python-headless
 mmcv==1.6.0
