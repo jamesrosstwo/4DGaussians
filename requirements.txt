@@ -1,12 +1,9 @@
 --index-url https://pypi.org/simple
 
---extra-index-url https://download.pytorch.org/whl/cu117
+--extra-index-url https://download.pytorch.org/whl/cu118
 
---find-links https://download.openmmlab.com/mmcv/dist/cu117/torch1.13/index.html
-
-torch==1.13.1+cu117
-torchvision==0.14.1+cu117
-torchaudio==0.13.1
+torch==2.1.2+cu118
+torchvision==0.16.2+cu118
 
 matplotlib
 argparse
@@ -22,4 +19,4 @@ jaxtyping
 rich
 
 opencv-python-headless
-mmcv==1.6.0
+mmcv
