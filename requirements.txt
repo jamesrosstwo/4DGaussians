@@ -14,9 +14,10 @@ open3d
 imageio[ffmpeg]
 tensorboard
 ninja
-numpy
+numpy==1.26.4
 jaxtyping
 rich
 
 opencv-python-headless
-mmcv
+mmcv-full
+gsplat
