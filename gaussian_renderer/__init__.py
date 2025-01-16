@@ -104,14 +104,14 @@ def render(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.Tensor, sc
 
     viewmat = viewpoint_camera.world_view_transform.transpose(0, 1)  # [4, 4]
     render_colors, render_alphas, info = rasterization(
-        means=means3D_final,  # [N, 3]
-        quats=rotations_final,  # [N, 4]
-        scales=scales_final,  # [N, 3]
-        opacities=opacity.squeeze(-1),  # [N,]
-        colors=colors,
-        viewmats=viewmat[None],  # [1, 4, 4]
-        Ks=K[None],  # [1, 3, 3]
-        backgrounds=bg_color[None],
+        means=means3D_final.cuda(),  # [N, 3]
+        quats=rotations_final.cuda(),  # [N, 4]
+        scales=scales_final.cuda(),  # [N, 3]
+        opacities=opacity.squeeze(-1).cuda(),  # [N,]
+        colors=colors.cuda(),
+        viewmats=viewmat[None].cuda(),  # [1, 4, 4]
+        Ks=K[None].cuda(),  # [1, 3, 3]
+        backgrounds=bg_color[None].cuda(),
         width=int(viewpoint_camera.image_width),
         height=int(viewpoint_camera.image_height),
         packed=False,
