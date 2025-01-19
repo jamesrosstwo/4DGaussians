@@ -90,7 +90,10 @@ def render(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.Tensor, sc
     rendered_image = render_colors[0].permute(2, 0, 1)
     radii = info["radii"].squeeze(0)  # [N,]
 
-    info["means2d"].retain_grad()
+    try:
+        info["means2d"].retain_grad()
+    except:
+        pass
 
     # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
     # They will be excluded from value updates used in the splitting criteria.
