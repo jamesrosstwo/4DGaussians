@@ -96,16 +96,12 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
     
     # dynerf, zerostamp_init
     # breakpoint()
-    if stage == "coarse" and opt.zerostamp_init:
-        load_in_memory = True
-        # batch_size = 4
-        temp_list = get_stamp_list(viewpoint_stack,0)
-        viewpoint_stack = temp_list.copy()
-    else:
-        load_in_memory = False 
+
+    load_in_memory = False
                             # 
     count = 0
-    for iteration in range(first_iter, final_iter+1):        
+    for iteration in range(first_iter, final_iter+1):
+        print("Network ITer", count, iteration)
         if network_gui.conn == None:
             network_gui.try_connect()
         while network_gui.conn != None:
@@ -127,6 +123,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
 
                     net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
                 network_gui.send(net_image_bytes, dataset.source_path)
+                print("did the thing")
                 if do_training and ((iteration < int(opt.iterations)) or not keep_alive) :
                     break
             except Exception as e:
@@ -142,32 +139,19 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
             gaussians.oneupSHdegree()
 
         # Pick a random Camera
+        # dynerf's branch TODO: we create a data loader at every iteration??
+        try:
+            print("reused existing loader")
+            viewpoint_cams = next(loader)
+        except StopIteration:
+            print("reset dataloader into random dataloader.")
+            if not random_loader:
+                print("CREATED NEW LOADER")
+                viewpoint_stack_loader = DataLoader(viewpoint_stack, batch_size=opt.batch_size,shuffle=True,num_workers=32,collate_fn=list)
+                random_loader = True
+            loader = iter(viewpoint_stack_loader)
 
-        # dynerf's branch
-        if opt.dataloader and not load_in_memory:
-            try:
-                viewpoint_cams = next(loader)
-            except StopIteration:
-                print("reset dataloader into random dataloader.")
-                if not random_loader:
-                    viewpoint_stack_loader = DataLoader(viewpoint_stack, batch_size=opt.batch_size,shuffle=True,num_workers=32,collate_fn=list)
-                    random_loader = True
-                loader = iter(viewpoint_stack_loader)
-
-        else:
-            idx = 0
-            viewpoint_cams = []
-
-            while idx < batch_size :    
-                    
-                viewpoint_cam = viewpoint_stack.pop(randint(0,len(viewpoint_stack)-1))
-                if not viewpoint_stack :
-                    viewpoint_stack =  temp_list.copy()
-                viewpoint_cams.append(viewpoint_cam)
-                idx +=1
-            if len(viewpoint_cams) == 0:
-                continue
-        # print(len(viewpoint_cams))     
+        # print(len(viewpoint_cams))
         # breakpoint()   
         # Render
         if (iteration - 1) == debug_from:
