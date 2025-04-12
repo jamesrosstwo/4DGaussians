@@ -1,5 +1,7 @@
-import concurrent.futures
-import gc
+from io import BytesIO
+from pathlib import Path
+
+import decord
 import glob
 import os
 
@@ -9,7 +11,6 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms as T
-from tqdm import tqdm
 
 
 def normalize(v):
@@ -109,78 +110,6 @@ def render_path_spiral(c2w, up, rads, focal, zdelta, zrate, N_rots=2, N=120):
     return render_poses
 
 
-def process_video(video_data_save, video_path, img_wh, downsample, transform):
-    """
-    Load video_path data to video_data_save tensor.
-    """
-    video_frames = cv2.VideoCapture(video_path)
-    count = 0
-    video_images_path = video_path.split('.')[0]
-    image_path = os.path.join(video_images_path, "images")
-
-    if not os.path.exists(image_path):
-        os.makedirs(image_path)
-        while video_frames.isOpened():
-            ret, video_frame = video_frames.read()
-            if ret:
-                video_frame = cv2.cvtColor(video_frame, cv2.COLOR_BGR2RGB)
-                video_frame = Image.fromarray(video_frame)
-                if downsample != 1.0:
-                    img = video_frame.resize(img_wh, Image.LANCZOS)
-                img.save(os.path.join(image_path, "%04d.png" % count))
-
-                img = transform(img)
-                video_data_save[count] = img.permute(1, 2, 0)
-                count += 1
-            else:
-                break
-
-    else:
-        images_path = os.listdir(image_path)
-        images_path.sort()
-
-        for path in images_path:
-            img = Image.open(os.path.join(image_path, path))
-            if downsample != 1.0:
-                img = img.resize(img_wh, Image.LANCZOS)
-                img = transform(img)
-                video_data_save[count] = img.permute(1, 2, 0)
-                count += 1
-
-    video_frames.release()
-    print(f"Video {video_path} processed.")
-    return None
-
-
-# define a function to process all videos
-def process_videos(videos, skip_index, img_wh, downsample, transform, num_workers=1):
-    """
-    A multi-threaded function to load all videos fastly and memory-efficiently.
-    To save memory, we pre-allocate a tensor to store all the images and spawn multi-threads to load the images into this tensor.
-    """
-    all_imgs = torch.zeros(len(videos) - 1, 300, img_wh[-1], img_wh[-2], 3)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-        # start a thread for each video
-        current_index = 0
-        futures = []
-        for index, video_path in enumerate(videos):
-            # skip the video with skip_index (eval video)
-            if index == skip_index:
-                continue
-            else:
-                future = executor.submit(
-                    process_video,
-                    all_imgs[current_index],
-                    video_path,
-                    img_wh,
-                    downsample,
-                    transform,
-                )
-                futures.append(future)
-                current_index += 1
-    return all_imgs
-
-
 def get_spiral(c2ws_all, near_fars, rads_scale=1.0, N_views=120):
     """
     Generate a set of poses using NeRF's spiral camera trajectory as validation poses.
@@ -224,6 +153,23 @@ class Neural3D_NDC_Dataset(Dataset):
             int(height / downsample),
         )  # According to the neural 3D paper, the default resolution is 1024x768
         self.root_dir = datadir
+        self._mp4_paths = sorted(Path(self.root_dir).glob("*mp4"), key=lambda p: int(p.stem[3:]))
+        self._mp4_readers = []
+        self._joint_index = []
+
+        for reader_idx, path in enumerate(self._mp4_paths):
+            with open(path, 'rb') as f:
+                video_bytes = f.read()
+
+            video_stream = BytesIO(video_bytes)
+            reader = decord.VideoReader(video_stream, ctx=decord.gpu(0))
+            self._mp4_readers.append(reader)
+
+            num_frames = len(reader)
+
+            for frame_idx in range(num_frames):
+                self._joint_index.append((reader_idx, frame_idx))
+
         self.split = split
         self.downsample = 2 * width / self.img_wh[0]
         self.time_scale = time_scale
@@ -350,10 +296,13 @@ class Neural3D_NDC_Dataset(Dataset):
         return len(self.image_paths)
 
     def __getitem__(self, index):
-        img = Image.open(self.image_paths[index])
-        img = img.resize(self.img_wh, Image.LANCZOS)
+        # img = Image.open(self.image_paths[index])
+        # img = img.resize(self.img_wh, Image.LANCZOS)
+        #
+        # img = self.transform(img)
 
-        img = self.transform(img)
+        reader_idx, frame_idx = self._joint_index[index]
+        img = self._mp4_readers[reader_idx][frame_idx]
         return img, self.image_poses[index], self.image_times[index]
 
     def load_pose(self, index):

@@ -2,5 +2,8 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/submodules/depth-diff-gaussian-rasterization" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/submodules/depth-diff-gaussian-rasterization/third_party/glm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/submodules/simple-knn" vcs="Git" />
   </component>
 </project>
