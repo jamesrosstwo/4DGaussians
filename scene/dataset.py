@@ -26,7 +26,9 @@ class FourDGSdataset(Dataset):
 
     def collate_fn(self, indices):
         cams = []
-        for index, (image, w2c, time) in self.dataset[indices]:
+        data = self.dataset.collate(indices)
+
+        for index, (image, w2c, time) in zip(indices, zip(*data)):
             R, T = w2c
             FovX = focal2fov(self.dataset.focal[0], image.shape[2])
             FovY = focal2fov(self.dataset.focal[0], image.shape[1])
@@ -34,3 +36,4 @@ class FourDGSdataset(Dataset):
             cams.append(Camera(colmap_id=index, R=R, T=T, FoVx=FovX, FoVy=FovY, image=image, gt_alpha_mask=None,
                           image_name=f"{index}", uid=index, data_device=torch.device("cuda"), time=time,
                           mask=mask))
+        return cams

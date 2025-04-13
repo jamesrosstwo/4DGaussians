@@ -376,7 +376,7 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
 def format_infos(dataset, split):
     # loading
     cameras = []
-    image = dataset[0][0]
+    image = dataset.collate([0])[0][0]
     if split == "train":
         for idx in tqdm(range(len(dataset))):
             image_path = None
@@ -400,7 +400,7 @@ def readHyperDataInfos(datadir, use_bg_points, eval):
     print("load finished")
     train_cam = format_hyper_data(train_cam_infos, "train")
     print("format finished")
-    max_time = train_cam_infos.max_time
+    max_time = train_cam_infos.max_timeD
     video_cam_infos = copy.deepcopy(test_cam_infos)
     video_cam_infos.split = "video"
 
@@ -428,7 +428,7 @@ def format_render_poses(poses, data_infos):
     tensor_to_pil = transforms.ToPILImage()
     len_poses = len(poses)
     times = [i / len_poses for i in range(len_poses)]
-    image = data_infos[0][0]
+    image = data_infos.collate([0])[0][0]
     for idx, p in tqdm(enumerate(poses)):
         # image = None
         image_path = None

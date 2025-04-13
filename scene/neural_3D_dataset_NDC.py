@@ -1,9 +1,11 @@
 from io import BytesIO
 from pathlib import Path
+from typing import List
 
 import decord
 import glob
 import os
+import ffmpeg
 
 import cv2
 import numpy as np
@@ -137,6 +139,44 @@ def get_spiral(c2ws_all, near_fars, rads_scale=1.0, N_views=120):
     return np.stack(render_poses)
 
 
+from pathlib import Path
+import ffmpeg
+
+
+def concatenate_videos(video_list, output_path: Path):
+    concat_list_path = output_path.parent / "concat_list.txt"
+
+    with concat_list_path.open('w') as f:
+        for video_path in video_list:
+            f.write(f"file '{video_path.resolve()}'\n")
+
+    # Intermediate temp file
+    temp_concat_path = output_path.parent / "temp_concat.mp4"
+
+    # 1. Concatenate without re-encoding (fast)
+    ffmpeg.input(str(concat_list_path), format='concat', safe=0)\
+        .output(str(temp_concat_path), c='copy')\
+        .run()
+
+    # 2. Re-encode for fast seekability
+    ffmpeg.input(str(temp_concat_path))\
+        .output(
+            str(output_path),
+            vcodec='libx264',
+            crf=28,               # lower quality, smaller size
+            preset='ultrafast',   # fastest encode preset
+            g=1,                 # keyframe every 15 frames
+            keyint_min=15,        # enforce minimum interval
+            sc_threshold=0,       # no scene change keyframes
+            pix_fmt='yuv420p'     # standard format
+        )\
+        .run()
+
+    # Cleanup
+    concat_list_path.unlink()
+    temp_concat_path.unlink()
+
+
 class Neural3D_NDC_Dataset(Dataset):
     def __init__(
             self,
@@ -155,22 +195,18 @@ class Neural3D_NDC_Dataset(Dataset):
             int(height / downsample),
         )  # According to the neural 3D paper, the default resolution is 1024x768
         self.root_dir = datadir
-        self._mp4_paths = sorted(Path(self.root_dir).glob("*mp4"), key=lambda p: int(p.stem[3:]))
-        self._mp4_readers = []
-        self._joint_index = []
+        self._mp4_paths = sorted(Path(self.root_dir).glob("cam*mp4"), key=lambda p: int(p.stem[3:]))
 
-        for reader_idx, path in enumerate(self._mp4_paths):
-            with open(path, 'rb') as f:
-                video_bytes = f.read()
+        self.video_path = Path(datadir) / "stitched.mp4"
+        if not self.video_path.exists():
+            concatenate_videos(self._mp4_paths, self.video_path)
 
-            video_stream = BytesIO(video_bytes)
-            reader = decord.VideoReader(video_stream, ctx=decord.gpu())
-            self._mp4_readers.append(reader)
+        with open(self.video_path, 'rb') as f:
+            video_bytes = f.read()
 
-            num_frames = len(reader)
+        video_stream = BytesIO(video_bytes)
+        self.reader = decord.VideoReader(video_stream, ctx=decord.gpu())
 
-            for frame_idx in range(num_frames):
-                self._joint_index.append((reader_idx, frame_idx))
         self.split = split
         self.downsample = 2 * width / self.img_wh[0]
         self.time_scale = time_scale
@@ -181,7 +217,6 @@ class Neural3D_NDC_Dataset(Dataset):
 
         self.load_meta()
         print(f"meta data loaded, total image:{len(self)}")
-
 
     def load_meta(self):
         """
@@ -297,12 +332,15 @@ class Neural3D_NDC_Dataset(Dataset):
     def __len__(self):
         return len(self.image_paths)
 
-    def __getitem__(self, index):
-        reader_idx, frame_idx = self._joint_index[index]
-        frames_decord = self._mp4_readers[reader_idx].get_batch([frame_idx])  # Decord NDArray on GPU
-        img = torch.utils.dlpack.from_dlpack(frames_decord.to_dlpack()).permute(0, 3, 1, 2).contiguous()[0] / 255
 
-        return img, self.image_poses[index], self.image_times[index]
+    def collate(self, batch_indices: List[int]):
+        frames = self.reader.get_batch(batch_indices)
+        img = torch.utils.dlpack.from_dlpack(frames.to_dlpack()).permute(0, 3, 1, 2).contiguous() / 255.0
+        poses = [self.image_poses[i] for i in batch_indices]
+        times = [self.image_times[i] for i in batch_indices]
+
+        return list(torch.unbind(img, dim=0)), poses, times
+    
 
     def load_pose(self, index):
         return self.image_poses[index]
