@@ -12,6 +12,8 @@ from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms as T
 
+import torch.multiprocessing as mp
+# mp.set_start_method('spawn', force=True) # Decord's cuda context doesnt like being reinitialized in forked workers
 
 def normalize(v):
     """Normalize a vector."""
@@ -162,14 +164,13 @@ class Neural3D_NDC_Dataset(Dataset):
                 video_bytes = f.read()
 
             video_stream = BytesIO(video_bytes)
-            reader = decord.VideoReader(video_stream, ctx=decord.gpu(0))
+            reader = decord.VideoReader(video_stream, ctx=decord.gpu())
             self._mp4_readers.append(reader)
 
             num_frames = len(reader)
 
             for frame_idx in range(num_frames):
                 self._joint_index.append((reader_idx, frame_idx))
-
         self.split = split
         self.downsample = 2 * width / self.img_wh[0]
         self.time_scale = time_scale
@@ -180,6 +181,7 @@ class Neural3D_NDC_Dataset(Dataset):
 
         self.load_meta()
         print(f"meta data loaded, total image:{len(self)}")
+
 
     def load_meta(self):
         """
@@ -296,13 +298,10 @@ class Neural3D_NDC_Dataset(Dataset):
         return len(self.image_paths)
 
     def __getitem__(self, index):
-        # img = Image.open(self.image_paths[index])
-        # img = img.resize(self.img_wh, Image.LANCZOS)
-        #
-        # img = self.transform(img)
-
         reader_idx, frame_idx = self._joint_index[index]
-        img = self._mp4_readers[reader_idx][frame_idx]
+        frames_decord = self._mp4_readers[reader_idx].get_batch([frame_idx])  # Decord NDArray on GPU
+        img = torch.utils.dlpack.from_dlpack(frames_decord.to_dlpack()).permute(0, 3, 1, 2).contiguous()[0] / 255
+
         return img, self.image_poses[index], self.image_times[index]
 
     def load_pose(self, index):

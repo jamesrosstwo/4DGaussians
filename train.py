@@ -101,6 +101,32 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                             # 
     count = 0
     for iteration in range(first_iter, final_iter+1):
+        if network_gui.conn == None:
+            network_gui.try_connect()
+        while network_gui.conn != None:
+            try:
+                net_image_bytes = None
+                custom_cam, do_training, pipe.convert_SHs_python, pipe.compute_cov3D_python, keep_alive, scaling_modifer = network_gui.receive()
+                if custom_cam != None:
+                    count +=1
+                    viewpoint_index = (count ) % len(video_cams)
+                    if (count //(len(video_cams))) % 2 == 0:
+                        viewpoint_index = viewpoint_index
+                    else:
+                        viewpoint_index = len(video_cams) - viewpoint_index - 1
+                    # print(viewpoint_index)
+                    viewpoint = video_cams[viewpoint_index]
+                    custom_cam.time = viewpoint.time
+                    # print(custom_cam.time, viewpoint_index, count)
+                    net_image = render(custom_cam, gaussians, pipe, background, scaling_modifer, stage=stage, cam_type=scene.dataset_type)["render"]
+
+                    net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
+                network_gui.send(net_image_bytes, dataset.source_path)
+                if do_training and ((iteration < int(opt.iterations)) or not keep_alive) :
+                    break
+            except Exception as e:
+                print(e)
+
         iter_start.record()
 
         gaussians.update_learning_rate(iteration)
@@ -115,7 +141,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
             viewpoint_cams = next(loader)
         except StopIteration:
             if not random_loader:
-                viewpoint_stack_loader = DataLoader(viewpoint_stack, batch_size=opt.batch_size,shuffle=True,num_workers=32,collate_fn=list)
+                viewpoint_stack_loader = DataLoader(viewpoint_stack, batch_size=opt.batch_size,shuffle=True,num_workers=0,collate_fn=list)
                 random_loader = True
             loader = iter(viewpoint_stack_loader)
 
@@ -133,11 +159,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
             render_pkg = render(viewpoint_cam, gaussians, pipe, background, stage=stage,cam_type=scene.dataset_type)
             image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
             images.append(image.unsqueeze(0))
-            if scene.dataset_type!="PanopticSports":
-                gt_image = viewpoint_cam.original_image.cuda()
-            else:
-                gt_image  = viewpoint_cam['image'].cuda()
-            
+            gt_image = viewpoint_cam.original_image
             gt_images.append(gt_image.unsqueeze(0))
             radii_list.append(radii.unsqueeze(0))
             visibility_filter_list.append(visibility_filter.unsqueeze(0))

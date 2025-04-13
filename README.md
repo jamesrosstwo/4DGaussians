@@ -62,12 +62,12 @@ The dataset provided in [HyperNeRF](https://github.com/google/hypernerf) is used
 
 Meanwhile, [Plenoptic Dataset](https://github.com/facebookresearch/Neural_3D_Video) could be downloaded from their official websites. To save the memory, you should extract the frames of each video and then organize your dataset as follows.
 
-```
+```csd 
 ├── data
 │   | dnerf 
 │     ├── mutant
 │     ├── standup 
-│     ├── ...
+│     ├── ...   
 │   | hypernerf
 │     ├── interp
 │     ├── misc
