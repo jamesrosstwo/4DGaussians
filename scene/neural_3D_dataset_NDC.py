@@ -205,7 +205,7 @@ class Neural3D_NDC_Dataset(Dataset):
             video_bytes = f.read()
 
         video_stream = BytesIO(video_bytes)
-        self.reader = decord.VideoReader(video_stream, ctx=decord.gpu())
+        self.reader = decord.VideoReader(video_stream)
 
         self.split = split
         self.downsample = 2 * width / self.img_wh[0]
@@ -313,6 +313,7 @@ class Neural3D_NDC_Dataset(Dataset):
     def collate(self, batch_indices: List[int]):
         frames = self.reader.get_batch(batch_indices)
         img = torch.utils.dlpack.from_dlpack(frames.to_dlpack()).permute(0, 3, 1, 2).contiguous() / 255.0
+        img = img.cuda()
         poses = [self.image_poses[i] for i in batch_indices]
         times = [self.image_times[i] for i in batch_indices]
 
