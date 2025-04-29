@@ -107,6 +107,7 @@ def render_sets(dataset : ModelParams, hyperparam, iteration : int, pipeline : P
         if not skip_video:
             views = _construct_loader(scene.getVideoCameras())
             render_set(dataset.model_path,"video",scene.loaded_iter, views,gaussians,pipeline,background,cam_type)
+
 if __name__ == "__main__":
     # Set up command line argument parser
     parser = ArgumentParser(description="Testing script parameters")

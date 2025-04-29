@@ -113,7 +113,7 @@ def _construct_loader(viewpoint_stack):
         collate_fn=lambda x: viewpoint_stack.collate_fn(x)[0]
     )
 
-for index, viewpoint in enumerate(_construct_loader(scene.getTestCameras())):
+for index, viewpoint in enumerate(_construct_loader(scene.getTrainCameras())):
     points, scales_final, rotations_final, opacity_final, shs_final = get_state_at_time(gaussians, viewpoint)
     feature_dc_shape = gaussians._features_dc.shape[1]
     feature_rest_shape = gaussians._features_rest.shape[1]

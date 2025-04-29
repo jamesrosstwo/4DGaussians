@@ -150,7 +150,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
             gaussians.oneupSHdegree()
 
         # Pick a random Camera
-        # dynerf's branch TODO: we create a data loader at every iteration??
+        # dynerf's branch
         try:
             viewpoint_cams = next(loader)
         except StopIteration:

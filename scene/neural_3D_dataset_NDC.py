@@ -15,7 +15,6 @@ from torch.utils.data import Dataset
 from torchvision import transforms as T
 
 import torch.multiprocessing as mp
-# mp.set_start_method('spawn', force=True) # Decord's cuda context doesnt like being reinitialized in forked workers
 
 def normalize(v):
     """Normalize a vector."""
@@ -266,7 +265,7 @@ class Neural3D_NDC_Dataset(Dataset):
         image_times = []
         N_cams = 0
         N_time = 0
-        countss = 300
+        countss = 299
         total_len = 0
         for index, video_path in enumerate(videos):
             N_cams += 1
@@ -275,8 +274,8 @@ class Neural3D_NDC_Dataset(Dataset):
             video_frames = cv2.VideoCapture(video_path)
 
             this_count = 0
-            total_len += 300
-            for idx in range(300):
+            total_len += 299
+            for idx in range(299):
                 if this_count >= countss: break
                 pose = np.array(self.poses_all[index])
                 R = pose[:3, :3]
@@ -286,7 +285,7 @@ class Neural3D_NDC_Dataset(Dataset):
                 image_times.append(idx / countss)
                 image_poses.append((R, T))
                 this_count += 1
-        return total_len, image_poses, image_times, N_cams, 300
+        return total_len, image_poses, image_times, N_cams, 299
 
     def __len__(self):
         return self._total_len
