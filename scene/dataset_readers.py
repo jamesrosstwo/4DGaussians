@@ -482,23 +482,10 @@ def readdynerfInfo(datadir, use_bg_points, eval):
         time_scale=1,
         scene_bbox_min=[-4, -4, -1.0],
         scene_bbox_max=[4, 4, 4],
-        eval_index=0,
-        height=frame_height,
-        width=frame_width,
-    )
-    test_dataset = Neural3D_NDC_Dataset(
-        datadir,
-        "test",
-        1.0,
-        time_scale=1,
-        scene_bbox_min=[-4, -4, -1.0],
-        scene_bbox_max=[4, 4, 4],
-        eval_index=0,
         height=frame_height,
         width=frame_width,
     )
     train_cam_infos = format_infos(train_dataset, "train")
-    val_cam_infos = format_render_poses(test_dataset.val_poses, test_dataset)
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     # xyz = np.load
@@ -509,8 +496,8 @@ def readdynerfInfo(datadir, use_bg_points, eval):
 
     scene_info = SceneInfo(point_cloud=pcd,
                            train_cameras=train_dataset,
-                           test_cameras=test_dataset,
-                           video_cameras=val_cam_infos,
+                           test_cameras=[],
+                           video_cameras=[],
                            nerf_normalization=nerf_normalization,
                            ply_path=ply_path,
                            maxtime=300

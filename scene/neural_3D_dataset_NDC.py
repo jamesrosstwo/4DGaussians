@@ -186,7 +186,6 @@ class Neural3D_NDC_Dataset(Dataset):
             time_scale=1.0,
             scene_bbox_min=[-1.0, -1.0, -1.0],
             scene_bbox_max=[1.0, 1.0, 1.0],
-            eval_index=0,
             width=1352,
             height=1014
     ):
@@ -212,7 +211,6 @@ class Neural3D_NDC_Dataset(Dataset):
         self.time_scale = time_scale
         self.scene_bbox = torch.tensor([scene_bbox_min, scene_bbox_max])
 
-        self.eval_index = eval_index
         self.transform = T.ToTensor()
 
         self.load_meta()
@@ -251,11 +249,7 @@ class Neural3D_NDC_Dataset(Dataset):
         self.val_poses = get_spiral(poses, self.near_fars, N_views=N_views)
         # self.val_poses = self.directions
         W, H = self.img_wh
-        poses_i_train = []
-
-        for i in range(len(poses)):
-            if i != self.eval_index:
-                poses_i_train.append(i)
+        poses_i_train = list(range(len(poses)))
         self.poses = poses[poses_i_train]
         self.poses_all = poses
         self._total_len, self.image_poses, self.image_times, N_cam, N_time = self.load_images_path(videos, self.split)
@@ -275,12 +269,6 @@ class Neural3D_NDC_Dataset(Dataset):
         countss = 300
         total_len = 0
         for index, video_path in enumerate(videos):
-            if index == self.eval_index:
-                if split == "train":
-                    continue
-            else:
-                if split == "test":
-                    continue
             N_cams += 1
             count = 0
             video_images_path = video_path.split('.')[0]
@@ -297,13 +285,7 @@ class Neural3D_NDC_Dataset(Dataset):
                 T = -pose[:3, 3].dot(R)
                 image_times.append(idx / countss)
                 image_poses.append((R, T))
-                # if self.downsample != 1.0:
-                #     img = video_frame.resize(self.img_wh, Image.LANCZOS)
-                # img.save(os.path.join(image_path,"%04d.png"%count))
                 this_count += 1
-
-            #     video_data_save[count] = img.permute(1,2,0)
-            #     count += 1
         return total_len, image_poses, image_times, N_cams, 300
 
     def __len__(self):

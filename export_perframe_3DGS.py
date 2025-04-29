@@ -107,10 +107,10 @@ def _construct_loader(viewpoint_stack):
     sampler = FineSampler(viewpoint_stack)
     return DataLoader(
         viewpoint_stack,
-        batch_size=32,
+        batch_size=1,
         sampler=sampler,
         num_workers=0,
-        collate_fn=viewpoint_stack.collate_fn
+        collate_fn=lambda x: viewpoint_stack.collate_fn(x)[0]
     )
 
 for index, viewpoint in enumerate(_construct_loader(scene.getTestCameras())):
