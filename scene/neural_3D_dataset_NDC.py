@@ -284,11 +284,8 @@ class Neural3D_NDC_Dataset(Dataset):
             N_cams += 1
             count = 0
             video_images_path = video_path.split('.')[0]
-            image_path = os.path.join(video_images_path, "images")
             video_frames = cv2.VideoCapture(video_path)
 
-            images_path = os.listdir(image_path)
-            images_path.sort()
             this_count = 0
             total_len += 300
             for idx in range(300):
@@ -304,11 +301,10 @@ class Neural3D_NDC_Dataset(Dataset):
                 #     img = video_frame.resize(self.img_wh, Image.LANCZOS)
                 # img.save(os.path.join(image_path,"%04d.png"%count))
                 this_count += 1
-            N_time = len(images_path)
 
             #     video_data_save[count] = img.permute(1,2,0)
             #     count += 1
-        return total_len, image_poses, image_times, N_cams, N_time
+        return total_len, image_poses, image_times, N_cams, 300
 
     def __len__(self):
         return len(self.image_paths)
