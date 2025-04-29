@@ -307,7 +307,7 @@ class Neural3D_NDC_Dataset(Dataset):
         return total_len, image_poses, image_times, N_cams, 300
 
     def __len__(self):
-        return len(self.image_paths)
+        return self._total_len
 
 
     def collate(self, batch_indices: List[int]):
