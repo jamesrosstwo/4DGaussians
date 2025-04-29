@@ -258,7 +258,7 @@ class Neural3D_NDC_Dataset(Dataset):
                 poses_i_train.append(i)
         self.poses = poses[poses_i_train]
         self.poses_all = poses
-        self.image_paths, self.image_poses, self.image_times, N_cam, N_time = self.load_images_path(videos, self.split)
+        self._total_len, self.image_poses, self.image_times, N_cam, N_time = self.load_images_path(videos, self.split)
         self.cam_number = N_cam
         self.time_number = N_time
 
@@ -268,12 +268,12 @@ class Neural3D_NDC_Dataset(Dataset):
         return render_poses, self.time_scale * render_times
 
     def load_images_path(self, videos, split):
-        image_paths = []
         image_poses = []
         image_times = []
         N_cams = 0
         N_time = 0
         countss = 300
+        total_len = 0
         for index, video_path in enumerate(videos):
             if index == self.eval_index:
                 if split == "train":
@@ -286,32 +286,13 @@ class Neural3D_NDC_Dataset(Dataset):
             video_images_path = video_path.split('.')[0]
             image_path = os.path.join(video_images_path, "images")
             video_frames = cv2.VideoCapture(video_path)
-            if not os.path.exists(image_path):
-                print(f"no images saved in {image_path}, extract images from video.")
-                os.makedirs(image_path)
-                this_count = 0
-                while video_frames.isOpened():
-                    ret, video_frame = video_frames.read()
-                    if this_count >= countss: break
-                    if ret:
-                        video_frame = cv2.cvtColor(video_frame, cv2.COLOR_BGR2RGB)
-                        video_frame = Image.fromarray(video_frame)
-                        if self.downsample != 1.0:
-                            img = video_frame.resize(self.img_wh, Image.LANCZOS)
-                        img.save(os.path.join(image_path, "%04d.png" % count))
-
-                        # img = transform(img)
-                        count += 1
-                        this_count += 1
-                    else:
-                        break
 
             images_path = os.listdir(image_path)
             images_path.sort()
             this_count = 0
-            for idx, path in enumerate(images_path):
+            total_len += 300
+            for idx in range(300):
                 if this_count >= countss: break
-                image_paths.append(os.path.join(image_path, path))
                 pose = np.array(self.poses_all[index])
                 R = pose[:3, :3]
                 R = -R
@@ -327,7 +308,7 @@ class Neural3D_NDC_Dataset(Dataset):
 
             #     video_data_save[count] = img.permute(1,2,0)
             #     count += 1
-        return image_paths, image_poses, image_times, N_cams, N_time
+        return total_len, image_poses, image_times, N_cams, N_time
 
     def __len__(self):
         return len(self.image_paths)
