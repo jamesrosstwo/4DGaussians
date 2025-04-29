@@ -1,6 +1,8 @@
 import imageio
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
+
 from scene import Scene
 import os
 import cv2
@@ -17,6 +19,8 @@ import open3d as o3d
 from plyfile import PlyData, PlyElement
 # import torch.multiprocessing as mp
 import threading
+
+from utils.loader_utils import FineSampler
 from utils.render_utils import get_state_at_time
 import concurrent.futures
 def render_sets(dataset : ModelParams, hyperparam, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool, skip_video: bool):
@@ -97,8 +101,19 @@ gaussians, scene = render_sets(model.extract(args), hyperparam.extract(args), ar
 output_path = os.path.join(args.model_path,"gaussian_pertimestamp")
 os.makedirs(output_path,exist_ok=True)
 print("Computing Gaussians.")
-for index, viewpoint in enumerate(scene.getTestCameras()):
-    
+
+
+def _construct_loader(viewpoint_stack):
+    sampler = FineSampler(viewpoint_stack)
+    return DataLoader(
+        viewpoint_stack,
+        batch_size=32,
+        sampler=sampler,
+        num_workers=0,
+        collate_fn=viewpoint_stack.collate_fn
+    )
+
+for index, viewpoint in enumerate(_construct_loader(scene.getTestCameras())):
     points, scales_final, rotations_final, opacity_final, shs_final = get_state_at_time(gaussians, viewpoint)
     feature_dc_shape = gaussians._features_dc.shape[1]
     feature_rest_shape = gaussians._features_rest.shape[1]
